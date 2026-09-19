@@ -70,13 +70,30 @@ export default function JourneyGraph({ elapsed, run }) {
         )}
       </div>
 
-      {selected && (
-        <div className="border-t border-border bg-base px-3 py-2 text-xs">
+            {selected && (
+        <div className="border-t border-border bg-base px-3 py-2.5 text-xs space-y-1">
           <div className="flex justify-between items-center">
             <span className="font-medium">{selected.label}</span>
             <button onClick={() => setSelected(null)} className="text-muted hover:text-ink">✕</button>
           </div>
-          <span className="text-muted font-mono">status: {selected.status} · branch: {selected.path || "root"}</span>
+          <div className="text-muted font-mono">status: {selected.status} · branch: {selected.path || "root"}</div>
+          {(() => {
+            const ev = run?.timeline.find((e) => Math.abs(e.t - selected.t) < 0.01);
+            if (!ev) return null;
+            return (
+              <>
+                <div className="text-ink/80">
+                  <span className="text-muted">Action: </span>
+                  <span className="font-mono">{ev.action ? `${ev.action.type}(${ev.action.x ?? ""}, ${ev.action.y ?? ""})` : "—"}</span>
+                </div>
+                {ev.finding && (
+                  <div className="text-friction">
+                    <span className="text-muted">Issue detected: </span>{ev.finding.title}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
     </section>
