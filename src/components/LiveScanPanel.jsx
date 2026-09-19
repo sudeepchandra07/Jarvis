@@ -20,7 +20,7 @@ export default function LiveScanPanel() {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch("http://localhost:8000/scan", {
+      const res = await fetch("https://jarvis-backend-idao.onrender.com/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
