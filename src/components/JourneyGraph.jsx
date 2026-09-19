@@ -1,101 +1,66 @@
 // src/components/JourneyGraph.jsx
-import { useState, useEffect } from "react";
+import { CheckCircle2, XCircle, MousePointerClick, Type as TypeIcon, Flag } from "lucide-react";
 
-const POS = {
-  n0: { x: 50, y: 8 }, n1: { x: 22, y: 32 }, n2: { x: 22, y: 56 },
-  n3: { x: 74, y: 32 }, n4: { x: 74, y: 50 }, n5: { x: 74, y: 68 },
-  n6: { x: 74, y: 84 }, n7: { x: 74, y: 97 }, n8: { x: 95, y: 14 },
-};
+const ICON = { click: MousePointerClick, type: TypeIcon, done: Flag, error: XCircle };
 
-const STATUS_COLOR = {
-  success: "#22C55E",
-  friction: "#EAB308",
-  blocker: "#EF4444",
-  unexplored: "#374151",
-};
-
-export default function JourneyGraph({ elapsed, run }) {
-  const [selected, setSelected] = useState(null);
-  useEffect(() => setSelected(null), [run]);
-
-  const nodes = run?.journeyGraph?.nodes || [];
-  const edges = run?.journeyGraph?.edges || [];
-  const revealed = (id) => {
-    const n = nodes.find((n) => n.id === id);
-    return n ? elapsed >= n.t : false;
-  };
+export default function JourneyGraph({ result, status, activeStep, setActiveStep }) {
+  const history = result?.history || [];
 
   return (
     <section className="bg-panel border border-border rounded-lg flex flex-col overflow-hidden min-h-[420px]">
       <div className="px-3 py-2 border-b border-border bg-base text-xs font-medium text-muted">
-        Interactive Journey Graph
+        Real Action Sequence (as actually executed)
       </div>
 
-      <div className="relative flex-1 m-3">
-        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-          {edges.map((e, i) => {
-            if (!revealed(e.to)) return null;
-            const a = POS[e.from];
-            const b = POS[e.to];
-            return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#1F2530" strokeWidth="0.6" />;
+      <div className="flex-1 overflow-y-auto p-3">
+        {history.length === 0 && (
+          <div className="h-full flex items-center justify-center text-muted text-sm text-center px-6">
+            {status === "running" ? "Agent is deciding and acting in real time..." : "Run the agent to see its real step-by-step path"}
+          </div>
+        )}
+
+        <div className="relative pl-6">
+          {history.length > 1 && (
+            <div className="absolute left-[9px] top-2 bottom-2 w-px bg-border" />
+          )}
+          {history.map((h, i) => {
+            const Icon = ICON[h.action] || MousePointerClick;
+            const isActive = i === activeStep;
+            const color = h.error ? "text-blocker border-blocker" : h.action === "done" ? "text-success border-success" : "text-accent border-accent";
+
+            return (
+              <button
+                key={i}
+                onClick={() => setActiveStep(i)}
+                className={`relative flex items-start gap-3 w-full text-left mb-3 rounded-lg p-2 transition-colors ${
+                  isActive ? "bg-accent/10 border border-accent/30" : "hover:bg-base border border-transparent"
+                }`}
+              >
+                <span className={`absolute -left-6 top-2 w-4 h-4 rounded-full border-2 bg-panel flex items-center justify-center ${color}`}>
+                  <Icon size={9} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <span className="font-mono uppercase text-xs">{h.action}</span>
+                    {h.index != null && <span className="text-muted font-mono text-xs">[{h.index}]</span>}
+                    {h.error ? <XCircle size={12} className="text-blocker ml-auto" /> : <CheckCircle2 size={12} className="text-success ml-auto" />}
+                  </div>
+                  {h.text && <p className="text-xs text-ink/70 font-mono mt-0.5 truncate">"{h.text}"</p>}
+                  <p className="text-xs text-muted italic mt-0.5 truncate">{h.reasoning}</p>
+                  {h.error && <p className="text-xs text-blocker mt-0.5">{h.error}</p>}
+                </div>
+              </button>
+            );
           })}
-        </svg>
+        </div>
 
-        {nodes.map((n) => {
-          const show = revealed(n.id);
-          const pos = POS[n.id];
-          const color = show ? STATUS_COLOR[n.status] : STATUS_COLOR.unexplored;
-          return (
-            <button
-              key={n.id}
-              onClick={() => show && setSelected(n)}
-              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 group"
-              style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-            >
-              <span
-                className="w-3.5 h-3.5 rounded-full border-2 transition-all duration-500"
-                style={{ backgroundColor: show ? color : "transparent", borderColor: color, boxShadow: show ? `0 0 8px ${color}66` : "none" }}
-              />
-              <span className="text-[9px] font-mono text-muted whitespace-nowrap max-w-[100px] truncate group-hover:text-ink">
-                {show ? n.label : "···"}
-              </span>
-            </button>
-          );
-        })}
-
-        {nodes.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
-            Graph will populate once the audit runs
+        {result && (
+          <div className="mt-3 pt-3 border-t border-border text-xs text-muted">
+            <div>Started: <span className="font-mono text-ink/70">{result.startUrl}</span></div>
+            <div>Ended: <span className="font-mono text-ink/70">{result.finalUrl}</span></div>
           </div>
         )}
       </div>
-
-            {selected && (
-        <div className="border-t border-border bg-base px-3 py-2.5 text-xs space-y-1">
-          <div className="flex justify-between items-center">
-            <span className="font-medium">{selected.label}</span>
-            <button onClick={() => setSelected(null)} className="text-muted hover:text-ink">✕</button>
-          </div>
-          <div className="text-muted font-mono">status: {selected.status} · branch: {selected.path || "root"}</div>
-          {(() => {
-            const ev = run?.timeline.find((e) => Math.abs(e.t - selected.t) < 0.01);
-            if (!ev) return null;
-            return (
-              <>
-                <div className="text-ink/80">
-                  <span className="text-muted">Action: </span>
-                  <span className="font-mono">{ev.action ? `${ev.action.type}(${ev.action.x ?? ""}, ${ev.action.y ?? ""})` : "—"}</span>
-                </div>
-                {ev.finding && (
-                  <div className="text-friction">
-                    <span className="text-muted">Issue detected: </span>{ev.finding.title}
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </div>
-      )}
     </section>
   );
 }

@@ -1,56 +1,54 @@
 // src/components/DiagnosticsPanel.jsx
 import { useState, useEffect } from "react";
-import { FileJson, FileText, MousePointerClick, Accessibility, ListChecks, Users, Wrench } from "lucide-react";
+import { FileJson, FileText, Accessibility, Users, Wrench, Flag, AlertTriangle } from "lucide-react";
 
-const TABS = ["Goal Verdict", "UX Friction", "Accessibility", "Export"];
+const TABS = ["Goal Verdict", "Accessibility", "Export"];
 
-const SEVERITY_STYLE = {
+const IMPACT_STYLE = {
   critical: "bg-blocker/15 text-blocker border-blocker/30",
-  high: "bg-friction/15 text-friction border-friction/30",
-  medium: "bg-accent/15 text-accent border-accent/30",
+  serious: "bg-blocker/15 text-blocker border-blocker/30",
+  moderate: "bg-friction/15 text-friction border-friction/30",
+  minor: "bg-accent/15 text-accent border-accent/30",
 };
 
-export default function DiagnosticsPanel({ elapsed, status, run, runEnd }) {
+export default function DiagnosticsPanel({ result, status, goal, url }) {
   const [tab, setTab] = useState(0);
-  useEffect(() => setTab(0), [run]);
-  const done = status === "done" && run;
+  useEffect(() => setTab(0), [result]);
+  const done = status === "done" && result;
 
-  const pathComparison = run?.pathComparison || [];
-  const uxFindings = run?.uxFindings || [];
-  const a11yFindings = run?.a11yFindings || [];
-  const summary = run?.summary;
-  const goalSpec = run?.goalSpec;
+  const violations = result?.violations || [];
+  const verdict = done
+    ? result.goalCompleted ? "Completed" : result.errored ? "Blocked" : "Incomplete (step limit reached)"
+    : "Pending";
 
   const downloadFile = (content, filename, type) => {
     const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
+    const urlObj = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
+    a.href = urlObj;
     a.download = filename;
     a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(urlObj);
   };
 
-  const exportJSON = () => {
-    downloadFile(JSON.stringify({ goalSpec, summary, pathComparison, uxFindings, a11yFindings }, null, 2), "audit-report.json", "application/json");
-  };
+  const exportJSON = () => downloadFile(JSON.stringify(result, null, 2), "agent-run-report.json", "application/json");
 
   const exportMarkdown = () => {
-    const md = `# Audit Report — ${goalSpec?.raw}
+    const md = `# Real Agent Run Report
 
-**Verdict:** ${summary?.verdict}
-**Paths explored:** ${summary?.pathsExplored} · **Blocked:** ${summary?.pathsBlocked} · **Total steps:** ${summary?.totalSteps} · **Time:** ${summary?.totalTime}
+**Goal:** ${goal}
+**Target:** ${url}
+**Verdict:** ${verdict}
+**Steps taken:** ${result?.stepsTaken}
+**Final URL:** ${result?.finalUrl}
 
-## Path Comparison
-${pathComparison.map((p) => `- **${p.path}** — ${p.steps} steps, ${p.time}, friction ${p.frictionScore ?? "—"}, verdict: ${p.verdict}. ${p.detail}`).join("\n")}
+## Action History
+${(result?.history || []).map((h, i) => `${i + 1}. **${h.action}**${h.index != null ? ` on [${h.index}]` : ""}${h.text ? ` — "${h.text}"` : ""} — ${h.reasoning}${h.error ? ` (ERROR: ${h.error})` : ""}`).join("\n")}
 
-## UX Friction Findings
-${uxFindings.map((f) => `- [${f.severity.toUpperCase()}] ${f.title}\n  What happens: ${f.plain}\n  (${f.coords}, ${f.timestamp})`).join("\n")}
-
-## Accessibility Audit (WCAG 2.1)
-${a11yFindings.map((f) => `- [${f.severity.toUpperCase()}] ${f.wcag} — ${f.title}\n  What happens: ${f.plain}\n  Affects: ${f.affects}\n  Selector: \`${f.selector}\`\n  Fix: ${f.fix}`).join("\n")}
+## Accessibility Findings (real, axe-core)
+${violations.length === 0 ? "None detected." : violations.map((v) => `- [${v.impact.toUpperCase()}] ${v.wcag} — ${v.title}\n  Selector: \`${v.selector}\``).join("\n")}
 `;
-    downloadFile(md, "audit-report.md", "text/markdown");
+    downloadFile(md, "agent-run-report.md", "text/markdown");
   };
 
   return (
@@ -72,89 +70,45 @@ ${a11yFindings.map((f) => `- [${f.severity.toUpperCase()}] ${f.wcag} — ${f.tit
       <div className="p-4 max-h-80 overflow-y-auto">
         {!done && (
           <p className="text-sm text-muted font-mono mb-3">
-            {status === "idle" ? "Run the audit to populate diagnostics." : `Run in progress — ${elapsed.toFixed(1)}s / ${runEnd.toFixed(1)}s`}
+            {status === "idle" ? "Run the agent to populate real results." : status === "running" ? "Agent is working — real steps in progress..." : "Run failed — see error above."}
           </p>
         )}
 
         {tab === 0 && (
-          <div>
-            <div className="flex flex-wrap gap-5 mb-4 text-sm">
-              <Badge label="Verdict" value={done ? summary.verdict : "Pending"} />
-              <Badge label="Paths Explored" value={done ? summary.pathsExplored : "—"} />
-              <Badge label="Blocked" value={done ? summary.pathsBlocked : "—"} />
-              <Badge label="A11y Violations" value={done ? summary.a11yViolations : "—"} />
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-muted text-left border-b border-border">
-                  <th className="py-2 font-medium">Path</th>
-                  <th className="font-medium">Steps</th>
-                  <th className="font-medium">Time</th>
-                  <th className="font-medium">Friction</th>
-                  <th className="font-medium">Verdict</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(done ? pathComparison : []).map((p) => (
-                  <tr key={p.path} className="border-b border-border/50 align-top">
-                    <td className="py-2.5 pr-2">
-                      <div className="font-medium">{p.path}</div>
-                      <div className="text-muted text-xs mt-0.5">{p.detail}</div>
-                    </td>
-                    <td className="font-mono">{p.steps}</td>
-                    <td className="font-mono">{p.time}</td>
-                    <td className="font-mono">{p.frictionScore ?? "—"}</td>
-                    <td>
-                      <span className={p.verdict.startsWith("Passed") ? "text-success" : p.verdict === "Blocked" ? "text-blocker" : "text-muted"}>
-                        {p.verdict}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-wrap gap-5 text-sm">
+            <Badge icon={Flag} label="Verdict" value={done ? verdict : "Pending"} />
+            <Badge label="Steps Taken" value={done ? result.stepsTaken : "—"} />
+            <Badge label="Goal" value={goal} wide />
+            <Badge label="A11y Violations (real)" value={done ? violations.length : "—"} />
           </div>
         )}
 
         {tab === 1 && (
           <div className="space-y-3">
-            {(done ? uxFindings : []).map((f, i) => (
-              <div key={i} className={`border rounded-lg px-4 py-3 text-sm ${SEVERITY_STYLE[f.severity] || SEVERITY_STYLE.medium}`}>
+            {(done ? violations : []).map((v, i) => (
+              <div key={i} className={`border rounded-lg px-4 py-3 text-sm ${IMPACT_STYLE[v.impact] || IMPACT_STYLE.minor}`}>
                 <div className="flex items-center gap-2 font-medium">
-                  <MousePointerClick size={14} /> {f.title}
-                  <span className="ml-auto font-mono text-xs opacity-70">{f.timestamp}</span>
+                  <Accessibility size={14} /> {v.title}
+                  <span className="ml-auto font-mono text-xs opacity-70">{v.wcag}</span>
                 </div>
-                <p className="mt-2 text-ink/90 leading-relaxed">{f.plain}</p>
-                <p className="mt-2 font-mono text-xs opacity-60">technical: {f.detail} (coords: {f.coords})</p>
+                <p className="mt-2 text-ink/80 text-xs leading-relaxed">{v.description}</p>
+                <p className="mt-2 font-mono text-xs opacity-60">selector: {v.selector}</p>
               </div>
             ))}
-            {done && uxFindings.length === 0 && <EmptyState icon={ListChecks} text="No UX friction detected." />}
+            {done && violations.length === 0 && (
+              <div className="flex items-center gap-2 text-muted text-sm py-4">
+                <Accessibility size={16} /> No violations detected by axe-core on the final page.
+              </div>
+            )}
+            {!done && (
+              <div className="flex items-center gap-2 text-muted text-sm py-4">
+                <AlertTriangle size={16} /> Run the agent to get a real axe-core scan of the final page state.
+              </div>
+            )}
           </div>
         )}
 
         {tab === 2 && (
-          <div className="space-y-3">
-            {(done ? a11yFindings : []).map((f, i) => (
-              <div key={i} className={`border rounded-lg px-4 py-3 text-sm ${SEVERITY_STYLE[f.severity]}`}>
-                <div className="flex items-center gap-2 font-medium">
-                  <Accessibility size={14} /> {f.title}
-                  <span className="ml-auto font-mono text-xs opacity-70">{f.wcag}</span>
-                </div>
-                <p className="mt-2 text-ink/90 leading-relaxed">{f.plain}</p>
-                <div className="mt-2.5 flex items-start gap-1.5 text-xs opacity-80">
-                  <Users size={12} className="mt-0.5 shrink-0" /><span><strong>Affects:</strong> {f.affects}</span>
-                </div>
-                <div className="mt-1.5 flex items-start gap-1.5 text-xs text-success/90">
-                  <Wrench size={12} className="mt-0.5 shrink-0" /><span><strong>Fix:</strong> {f.fix}</span>
-                </div>
-                <p className="mt-2 font-mono text-xs opacity-50">selector: {f.selector}</p>
-              </div>
-            ))}
-            {done && a11yFindings.length === 0 && <EmptyState icon={Accessibility} text="No accessibility violations found." />}
-          </div>
-        )}
-
-        {tab === 3 && (
           <div className="flex gap-3">
             <button onClick={exportJSON} disabled={!done} className="flex items-center gap-2 bg-base border border-border hover:border-accent disabled:opacity-40 disabled:cursor-not-allowed text-sm px-4 py-2.5 rounded">
               <FileJson size={15} /> Export as JSON
@@ -169,19 +123,11 @@ ${a11yFindings.map((f) => `- [${f.severity.toUpperCase()}] ${f.wcag} — ${f.tit
   );
 }
 
-function Badge({ label, value }) {
+function Badge({ icon: Icon, label, value, wide }) {
   return (
-    <div className="flex flex-col">
-      <span className="text-muted text-xs">{label}</span>
-      <span className="font-mono font-medium">{value}</span>
-    </div>
-  );
-}
-
-function EmptyState({ icon: Icon, text }) {
-  return (
-    <div className="flex items-center gap-2 text-muted text-sm py-4">
-      <Icon size={16} /> {text}
+    <div className={`flex flex-col ${wide ? "max-w-xs" : ""}`}>
+      <span className="text-muted text-xs flex items-center gap-1">{Icon && <Icon size={11} />} {label}</span>
+      <span className="font-mono font-medium truncate">{value}</span>
     </div>
   );
 }

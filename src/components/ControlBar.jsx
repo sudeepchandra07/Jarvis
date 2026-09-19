@@ -1,23 +1,12 @@
 // src/components/ControlBar.jsx
-import { Play, Pause, RotateCcw, Bot, ArrowLeft, Info } from "lucide-react";
-
-const STATE_COLOR = {
-  IDLE: "text-muted",
-  OBSERVING: "text-accent",
-  DECIDING: "text-accent",
-  EXECUTING: "text-accent",
-  EVALUATING: "text-accent",
-};
+import { Play, RotateCcw, Bot, ArrowLeft, Info, Loader2 } from "lucide-react";
 
 export default function ControlBar({
   status, urlInput, goalInput, onUrlChange, onGoalChange,
-  onRun, onPause, onReset, onHome, current, visibleEvents,
+  onRun, onReset, onHome, result, activeStep,
 }) {
-  const agentState = current?.state || "IDLE";
-  const stepCount = visibleEvents.length;
-  const activeBranch = current?.path || "—";
-  const visitedStates = new Set(visibleEvents.map((e) => e.path)).size;
-  const busy = status === "running" || status === "paused";
+  const busy = status === "running";
+  const stepCount = result?.history?.length || 0;
 
   return (
     <header className="border-b border-border bg-panel px-5 py-4">
@@ -25,31 +14,31 @@ export default function ControlBar({
         <button onClick={onHome} className="flex items-center gap-1 text-muted hover:text-ink text-sm transition-colors">
           <ArrowLeft size={16} />
         </button>
-        <Bot size={24} className={`text-accent ${status === "running" ? "animate-pulse" : ""}`} />
+        <Bot size={24} className={`text-accent ${busy ? "animate-pulse" : ""}`} />
         <h1 className="text-lg font-semibold tracking-tight">JARVIS</h1>
         <span className="text-sm text-muted ml-1 hidden md:inline">
-          Autonomous Black-Box UI/UX &amp; Accessibility Testing
+          Real Autonomous Agent — Playwright + Groq LLM
         </span>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-muted">Target URL</label>
+          <label className="text-sm text-muted">Target URL (any real website)</label>
           <input
             value={urlInput}
             onChange={(e) => onUrlChange(e.target.value)}
             disabled={busy}
             placeholder="https://example.com"
-            className="bg-base border border-border rounded px-2.5 py-2 text-sm w-64 focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60"
+            className="bg-base border border-border rounded px-2.5 py-2 text-sm w-72 focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60"
           />
         </div>
         <div className="flex flex-col gap-1 flex-1 min-w-[260px]">
-          <label className="text-sm text-muted">Natural Language Goal</label>
+          <label className="text-sm text-muted">Real Task / Goal</label>
           <input
             value={goalInput}
             onChange={(e) => onGoalChange(e.target.value)}
             disabled={busy}
-            placeholder="Find X under $Y and complete checkout"
+            placeholder="e.g. Click the More information link"
             className="bg-base border border-border rounded px-2.5 py-2 text-sm w-full focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60"
           />
         </div>
@@ -58,16 +47,10 @@ export default function ControlBar({
           <button
             onClick={onRun}
             disabled={busy}
-            className="flex items-center gap-1.5 bg-accent hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-3.5 py-2 rounded transition-colors"
+            className="flex items-center gap-1.5 bg-accent hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-medium px-3.5 py-2 rounded transition-colors"
           >
-            <Play size={15} /> Run Autonomous Audit
-          </button>
-          <button
-            onClick={onPause}
-            disabled={status === "idle" || status === "done"}
-            className="flex items-center gap-1.5 bg-panel border border-border hover:border-muted disabled:opacity-40 disabled:cursor-not-allowed text-sm px-3.5 py-2 rounded transition-colors"
-          >
-            <Pause size={15} /> {status === "paused" ? "Resume" : "Pause"}
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
+            {busy ? "Agent working..." : "Run Autonomous Audit"}
           </button>
           <button
             onClick={onReset}
@@ -79,12 +62,11 @@ export default function ControlBar({
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-border text-sm">
-        <div><span className="text-muted">Agent State: </span><span className={`font-mono font-medium ${STATE_COLOR[agentState]}`}>{agentState}</span></div>
-        <div><span className="text-muted">Step Count: </span><span className="font-mono">{stepCount}</span></div>
-        <div><span className="text-muted">Visited States: </span><span className="font-mono">{visitedStates}</span></div>
-        <div><span className="text-muted">Active Branch: </span><span className="font-mono">{activeBranch}</span></div>
+        <div><span className="text-muted">Status: </span><span className="font-mono font-medium text-accent">{status.toUpperCase()}</span></div>
+        <div><span className="text-muted">Steps Taken: </span><span className="font-mono">{stepCount}</span></div>
+        <div><span className="text-muted">Current Step: </span><span className="font-mono">{result ? activeStep + 1 : "—"}</span></div>
         <div className="ml-auto flex items-center gap-1.5 text-xs text-muted">
-          <Info size={13} /> Reference simulation engine — type any goal/URL, agent reasoning adapts live
+          <Info size={13} /> Real agent — genuinely browses, decides, and scans the site you enter
         </div>
       </div>
     </header>
