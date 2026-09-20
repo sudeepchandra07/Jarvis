@@ -23,22 +23,22 @@ export default function ControlBar({
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-muted">Target URL (any real website)</label>
+          <label className="text-sm text-muted">Application Link (any real website)</label>
           <input
             value={urlInput}
             onChange={(e) => onUrlChange(e.target.value)}
             disabled={busy}
-            placeholder="https://example.com"
+            placeholder="https://your-app.com"
             className="bg-base border border-border rounded px-2.5 py-2 text-sm w-72 focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60"
           />
         </div>
         <div className="flex flex-col gap-1 flex-1 min-w-[260px]">
-          <label className="text-sm text-muted">Real Task / Goal</label>
+          <label className="text-sm text-muted">Specific Task</label>
           <input
             value={goalInput}
             onChange={(e) => onGoalChange(e.target.value)}
             disabled={busy}
-            placeholder="e.g. Click the More information link"
+            placeholder="e.g. Log in with test credentials and open settings"
             className="bg-base border border-border rounded px-2.5 py-2 text-sm w-full focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60"
           />
         </div>
@@ -66,7 +66,7 @@ export default function ControlBar({
         <div><span className="text-muted">Steps Taken: </span><span className="font-mono">{stepCount}</span></div>
         <div><span className="text-muted">Current Step: </span><span className="font-mono">{result ? activeStep + 1 : "—"}</span></div>
         <div className="ml-auto flex items-center gap-1.5 text-xs text-muted">
-          <Info size={13} /> Real agent — genuinely browses, decides, and scans the site you enter
+          <Info size={13} /> Genuinely browses and acts on the site you enter — no simulation
         </div>
       </div>
     </header>

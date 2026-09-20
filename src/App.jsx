@@ -40,6 +40,7 @@ export default function App() {
       }
       const data = await res.json();
       setResult(data);
+      setActiveStep(Math.max(0, data.history.length - 1));
       setStatus("done");
     } catch (e) {
       setError(e.message || "Could not reach backend.");

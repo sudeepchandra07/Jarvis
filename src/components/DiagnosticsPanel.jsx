@@ -1,6 +1,6 @@
 // src/components/DiagnosticsPanel.jsx
 import { useState, useEffect } from "react";
-import { FileJson, FileText, Accessibility, Users, Wrench, Flag, AlertTriangle } from "lucide-react";
+import { FileJson, FileText, Accessibility, Flag, AlertTriangle } from "lucide-react";
 
 const TABS = ["Goal Verdict", "Accessibility", "Export"];
 
@@ -36,8 +36,8 @@ export default function DiagnosticsPanel({ result, status, goal, url }) {
   const exportMarkdown = () => {
     const md = `# Real Agent Run Report
 
-**Goal:** ${goal}
-**Target:** ${url}
+**Task:** ${goal}
+**Application:** ${url}
 **Verdict:** ${verdict}
 **Steps taken:** ${result?.stepsTaken}
 **Final URL:** ${result?.finalUrl}
@@ -78,7 +78,7 @@ ${violations.length === 0 ? "None detected." : violations.map((v) => `- [${v.imp
           <div className="flex flex-wrap gap-5 text-sm">
             <Badge icon={Flag} label="Verdict" value={done ? verdict : "Pending"} />
             <Badge label="Steps Taken" value={done ? result.stepsTaken : "—"} />
-            <Badge label="Goal" value={goal} wide />
+            <Badge label="Task" value={goal} wide />
             <Badge label="A11y Violations (real)" value={done ? violations.length : "—"} />
           </div>
         )}

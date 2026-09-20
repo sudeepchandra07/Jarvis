@@ -1,11 +1,31 @@
 // src/components/AgentViewport.jsx
-import { ImageIcon } from "lucide-react";
+import { MousePointer2, ImageIcon } from "lucide-react";
 import ThoughtStream from "./ThoughtStream";
+
+const VIEWPORT_W = 1280;
+const VIEWPORT_H = 800;
 
 export default function AgentViewport({ result, status, activeStep, setActiveStep }) {
   const screenshots = result?.screenshots || [];
   const currentShot = screenshots[activeStep] || result?.finalScreenshot;
   const currentAction = result?.history?.[activeStep];
+  const bbox = currentAction?.bbox;
+
+  const markerStyle = bbox
+    ? {
+        left: `${((bbox.x + bbox.width / 2) / VIEWPORT_W) * 100}%`,
+        top: `${((bbox.y + bbox.height / 2) / VIEWPORT_H) * 100}%`,
+      }
+    : null;
+
+  const boxStyle = bbox
+    ? {
+        left: `${(bbox.x / VIEWPORT_W) * 100}%`,
+        top: `${(bbox.y / VIEWPORT_H) * 100}%`,
+        width: `${(bbox.width / VIEWPORT_W) * 100}%`,
+        height: `${(bbox.height / VIEWPORT_H) * 100}%`,
+      }
+    : null;
 
   return (
     <section className="bg-panel border border-border rounded-lg flex flex-col overflow-hidden min-h-[420px]">
@@ -23,15 +43,40 @@ export default function AgentViewport({ result, status, activeStep, setActiveSte
       <div className="relative flex-1 bg-[#0D1117] m-3 rounded border border-border overflow-hidden flex items-center justify-center">
         {status === "running" && (
           <div className="text-muted text-sm text-center px-6">
-            Real browser is running — screenshots will appear once the agent finishes each step...
+            Real browser is running — live screenshots appear as each step completes...
           </div>
         )}
+
         {currentShot && (
-          <img src={currentShot} alt={`Step ${activeStep + 1}`} className="w-full h-full object-contain" />
+          <div className="relative w-full h-full">
+            <img src={currentShot} alt={`Step ${activeStep + 1}`} className="w-full h-full object-contain" />
+
+            {boxStyle && (
+              <div
+                className="absolute border-2 border-accent rounded-sm pointer-events-none"
+                style={boxStyle}
+              />
+            )}
+            {markerStyle && (
+              <div
+                className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                style={markerStyle}
+              >
+                <span className="absolute inset-0 -m-2 rounded-full bg-accent/40 animate-ping" />
+                <MousePointer2 size={20} className="text-white drop-shadow-[0_0_5px_rgba(59,130,246,1)]" fill="white" />
+                {currentAction?.action === "type" && currentAction?.text && (
+                  <span className="absolute left-6 top-0 text-[10px] font-mono bg-accent text-white px-1.5 py-0.5 rounded whitespace-nowrap">
+                    typing "{currentAction.text}"
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         )}
+
         {!result && status !== "running" && (
           <div className="text-muted text-sm text-center px-6">
-            Enter a real URL and goal above, then press "Run Autonomous Audit"
+            Enter a real URL and task above, then press "Run Autonomous Audit"
           </div>
         )}
       </div>
