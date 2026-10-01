@@ -5,8 +5,9 @@ export default function ControlBar({
   status, urlInput, goalInput, onUrlChange, onGoalChange,
   onRun, onReset, onHome, result, activeStep,
 }) {
-  const busy = status === "running";
+  const busy = status === "running" || status === "replaying";
   const stepCount = result?.history?.length || 0;
+  const isQuickScan = result?.quickScanOnly;
 
   return (
     <header className="border-b border-border bg-panel px-5 py-4">
@@ -17,13 +18,13 @@ export default function ControlBar({
         <Bot size={24} className={`text-accent ${busy ? "animate-pulse" : ""}`} />
         <h1 className="text-lg font-semibold tracking-tight">JARVIS</h1>
         <span className="text-sm text-muted ml-1 hidden md:inline">
-          Real Autonomous Agent — Playwright + Groq LLM
+          One real agent — browses, acts, and audits any site
         </span>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-sm text-muted">Application Link (any real website)</label>
+          <label className="text-sm text-muted">Website URL</label>
           <input
             value={urlInput}
             onChange={(e) => onUrlChange(e.target.value)}
@@ -33,12 +34,12 @@ export default function ControlBar({
           />
         </div>
         <div className="flex flex-col gap-1 flex-1 min-w-[260px]">
-          <label className="text-sm text-muted">Specific Task</label>
+          <label className="text-sm text-muted">Task (optional — leave blank for a quick accessibility scan)</label>
           <input
             value={goalInput}
             onChange={(e) => onGoalChange(e.target.value)}
             disabled={busy}
-            placeholder="e.g. Log in with test credentials and open settings"
+            placeholder="e.g. Click the Learn more link — or leave empty to just scan"
             className="bg-base border border-border rounded px-2.5 py-2 text-sm w-full focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-60"
           />
         </div>
@@ -50,7 +51,7 @@ export default function ControlBar({
             className="flex items-center gap-1.5 bg-accent hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-medium px-3.5 py-2 rounded transition-colors"
           >
             {busy ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
-            {busy ? "Agent working..." : "Run Autonomous Audit"}
+            {busy ? "Working..." : "Run Audit"}
           </button>
           <button
             onClick={onReset}
@@ -64,9 +65,14 @@ export default function ControlBar({
       <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-border text-sm">
         <div><span className="text-muted">Status: </span><span className="font-mono font-medium text-accent">{status.toUpperCase()}</span></div>
         <div><span className="text-muted">Steps Taken: </span><span className="font-mono">{stepCount}</span></div>
-        <div><span className="text-muted">Current Step: </span><span className="font-mono">{result ? activeStep + 1 : "—"}</span></div>
+        {result && (
+          <div>
+            <span className="text-muted">Mode: </span>
+            <span className="font-mono">{isQuickScan ? "Quick Scan" : "Task Execution"}</span>
+          </div>
+        )}
         <div className="ml-auto flex items-center gap-1.5 text-xs text-muted">
-          <Info size={13} /> Genuinely browses and acts on the site you enter — no simulation
+          <Info size={13} /> Genuinely browses and acts — no simulation
         </div>
       </div>
     </header>

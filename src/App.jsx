@@ -1,29 +1,51 @@
 // src/App.jsx
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Landing from "./components/Landing";
 import ControlBar from "./components/ControlBar";
 import AgentViewport from "./components/AgentViewport";
 import JourneyGraph from "./components/JourneyGraph";
 import DiagnosticsPanel from "./components/DiagnosticsPanel";
 import TelemetryLog from "./components/TelemetryLog";
-import LiveScanPanel from "./components/LiveScanPanel";
-import { ShieldAlert, Compass } from "lucide-react";
 
 const DEFAULT_URL = "https://example.com";
-const DEFAULT_GOAL = "Click the More information link";
+const DEFAULT_GOAL = "";
 const BACKEND = "https://jarvis-backend-2wtp.onrender.com";
+const REPLAY_STEP_MS = 1400;
 
 export default function App() {
   const [page, setPage] = useState("landing");
-  const [mode, setMode] = useState("journey"); // journey | live
-  const [status, setStatus] = useState("idle"); // idle | running | done | error
+  const [status, setStatus] = useState("idle"); // idle | running | replaying | done | error
   const [urlInput, setUrlInput] = useState(DEFAULT_URL);
   const [goalInput, setGoalInput] = useState(DEFAULT_GOAL);
   const [result, setResult] = useState(null);
   const [activeStep, setActiveStep] = useState(0);
   const [error, setError] = useState(null);
+  const replayRef = useRef(null);
+
+  const startReplay = (data) => {
+    if (!data.history || data.history.length <= 1) {
+      setActiveStep(0);
+      setStatus("done");
+      return;
+    }
+    setStatus("replaying");
+    setActiveStep(0);
+    let i = 0;
+    clearInterval(replayRef.current);
+    replayRef.current = setInterval(() => {
+      i += 1;
+      if (i >= data.history.length) {
+        clearInterval(replayRef.current);
+        setActiveStep(data.history.length - 1);
+        setStatus("done");
+      } else {
+        setActiveStep(i);
+      }
+    }, REPLAY_STEP_MS);
+  };
 
   const handleRun = async () => {
+    clearInterval(replayRef.current);
     setStatus("running");
     setError(null);
     setResult(null);
@@ -36,12 +58,11 @@ export default function App() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `Agent run failed (${res.status})`);
+        throw new Error(err.detail || `Run failed (${res.status})`);
       }
       const data = await res.json();
       setResult(data);
-      setActiveStep(Math.max(0, data.history.length - 1));
-      setStatus("done");
+      startReplay(data);
     } catch (e) {
       setError(e.message || "Could not reach backend.");
       setStatus("error");
@@ -49,6 +70,7 @@ export default function App() {
   };
 
   const handleReset = () => {
+    clearInterval(replayRef.current);
     setStatus("idle");
     setResult(null);
     setError(null);
@@ -61,54 +83,29 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-base text-ink font-sans flex flex-col">
-      <div className="border-b border-border bg-panel px-5 flex gap-1 overflow-x-auto">
-        <button
-          onClick={() => setMode("journey")}
-          className={`flex items-center gap-1.5 text-sm px-4 py-2.5 border-b-2 whitespace-nowrap transition-colors ${
-            mode === "journey" ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
-          }`}
-        >
-          <Compass size={15} /> Agentic Journey (Real)
-        </button>
-        <button
-          onClick={() => setMode("live")}
-          className={`flex items-center gap-1.5 text-sm px-4 py-2.5 border-b-2 whitespace-nowrap transition-colors ${
-            mode === "live" ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
-          }`}
-        >
-          <ShieldAlert size={15} /> Accessibility Only Scan
-        </button>
-      </div>
-
-      {mode === "journey" ? (
-        <>
-          <ControlBar
-            status={status}
-            urlInput={urlInput}
-            goalInput={goalInput}
-            onUrlChange={setUrlInput}
-            onGoalChange={setGoalInput}
-            onRun={handleRun}
-            onReset={handleReset}
-            onHome={() => { handleReset(); setPage("landing"); }}
-            result={result}
-            activeStep={activeStep}
-          />
-          {error && (
-            <div className="bg-blocker/10 border-y border-blocker/30 text-blocker text-sm font-mono px-4 py-2">
-              ⚠ {error}
-            </div>
-          )}
-          <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 p-3 min-h-0">
-            <AgentViewport result={result} status={status} activeStep={activeStep} setActiveStep={setActiveStep} />
-            <JourneyGraph result={result} status={status} activeStep={activeStep} setActiveStep={setActiveStep} />
-          </main>
-          <TelemetryLog result={result} />
-          <DiagnosticsPanel result={result} status={status} goal={goalInput} url={urlInput} />
-        </>
-      ) : (
-        <LiveScanPanel />
+      <ControlBar
+        status={status}
+        urlInput={urlInput}
+        goalInput={goalInput}
+        onUrlChange={setUrlInput}
+        onGoalChange={setGoalInput}
+        onRun={handleRun}
+        onReset={handleReset}
+        onHome={() => { handleReset(); setPage("landing"); }}
+        result={result}
+        activeStep={activeStep}
+      />
+      {error && (
+        <div className="bg-blocker/10 border-y border-blocker/30 text-blocker text-sm font-mono px-4 py-2">
+          ⚠ {error}
+        </div>
       )}
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 p-3 min-h-0">
+        <AgentViewport result={result} status={status} activeStep={activeStep} setActiveStep={setActiveStep} />
+        <JourneyGraph result={result} status={status} activeStep={activeStep} setActiveStep={setActiveStep} />
+      </main>
+      <TelemetryLog result={result} />
+      <DiagnosticsPanel result={result} status={status} goal={goalInput} url={urlInput} />
     </div>
   );
 }
