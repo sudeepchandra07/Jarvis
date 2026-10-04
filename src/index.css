@@ -1,19 +1,64 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 html {
-  font-size: 18px; /* bumps every Tailwind text-* size proportionally */
+  font-size: 18px;
 }
 
 body {
-  background-color: #0A0E14;
-  color: #E4E7EC;
+  color: #F5F7FA;
   font-family: 'Inter', sans-serif;
+  background-color: #11151F;
+  background-image:
+    radial-gradient(ellipse 85% 55% at 15% -10%, rgba(91,157,255,0.28), transparent),
+    radial-gradient(ellipse 70% 55% at 100% 5%, rgba(155,124,255,0.22), transparent),
+    radial-gradient(ellipse 65% 55% at 0% 100%, rgba(91,157,255,0.16), transparent),
+    radial-gradient(ellipse 50% 40% at 90% 90%, rgba(155,124,255,0.14), transparent);
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #12161F; }
-::-webkit-scrollbar-thumb { background: #1F2530; border-radius: 4px; }
+::-webkit-scrollbar-track { background: #1A2029; }
+::-webkit-scrollbar-thumb { background: #3A4557; border-radius: 4px; }
+
+*:focus-visible {
+  outline: 2px solid #5B9DFF;
+  outline-offset: 2px;
+}
+
+.glass-panel {
+  background: rgba(27, 33, 45, 0.78);
+  backdrop-filter: blur(16px);
+  border: 1px solid #2E3747;
+  border-radius: 0.875rem;
+  position: relative;
+}
+
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(91,157,255,0.45), transparent 40%, rgba(155,124,255,0.3));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #2E3747;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #9AA5B5;
+  letter-spacing: 0.01em;
+}

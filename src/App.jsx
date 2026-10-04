@@ -1,20 +1,23 @@
 // src/App.jsx
 import { useState, useRef } from "react";
 import Landing from "./components/Landing";
-import ControlBar from "./components/ControlBar";
-import AgentViewport from "./components/AgentViewport";
-import JourneyGraph from "./components/JourneyGraph";
-import DiagnosticsPanel from "./components/DiagnosticsPanel";
-import TelemetryLog from "./components/TelemetryLog";
+import InputStage from "./components/InputStage";
+import RunningStage from "./components/RunningStage";
+import ResultsStage from "./components/ResultsStage";
+import AmbientCanvas from "./components/AmbientCanvas";
 
 const DEFAULT_URL = "https://example.com";
 const DEFAULT_GOAL = "";
 const BACKEND = "https://jarvis-backend-2wtp.onrender.com";
 const REPLAY_STEP_MS = 1400;
 
+// black hole position per page (fraction of the viewport)
+const LANDING_POS = { x: 0.55, y: 0.42 };
+const DASHBOARD_POS = { x: 0.82, y: 0.5 };
+
 export default function App() {
   const [page, setPage] = useState("landing");
-  const [status, setStatus] = useState("idle"); // idle | running | replaying | done | error
+  const [status, setStatus] = useState("idle");
   const [urlInput, setUrlInput] = useState(DEFAULT_URL);
   const [goalInput, setGoalInput] = useState(DEFAULT_GOAL);
   const [result, setResult] = useState(null);
@@ -77,35 +80,77 @@ export default function App() {
     setActiveStep(0);
   };
 
-  if (page === "landing") {
-    return <Landing onLaunch={() => setPage("dashboard")} />;
-  }
+  const stage =
+    status === "running"
+      ? "loading"
+      : status === "replaying" || status === "done"
+      ? "results"
+      : "input";
 
   return (
-    <div className="min-h-screen bg-base text-ink font-sans flex flex-col">
-      <ControlBar
-        status={status}
-        urlInput={urlInput}
-        goalInput={goalInput}
-        onUrlChange={setUrlInput}
-        onGoalChange={setGoalInput}
-        onRun={handleRun}
-        onReset={handleReset}
-        onHome={() => { handleReset(); setPage("landing"); }}
-        result={result}
-        activeStep={activeStep}
-      />
-      {error && (
-        <div className="bg-blocker/10 border-y border-blocker/30 text-blocker text-sm font-mono px-4 py-2">
-          ⚠ {error}
+    <>
+      {/* mounted once, so it never restarts when you switch pages */}
+      <AmbientCanvas pos={page === "landing" ? LANDING_POS : DASHBOARD_POS} />
+
+      {page === "landing" ? (
+        <Landing onLaunch={() => setPage("dashboard")} />
+      ) : (
+        <div className="min-h-screen text-ink font-sans flex flex-col relative" style={{ zIndex: 1 }}>
+          <header className="border-b border-border bg-panel/60 backdrop-blur px-6 py-4 flex items-center justify-between">
+            <button
+              onClick={() => { handleReset(); setPage("landing"); }}
+              className="font-display font-semibold text-base tracking-tight text-ink hover:text-accent transition-colors"
+            >
+              JARVIS
+            </button>
+            {stage === "results" && (
+              <button
+                onClick={handleReset}
+                className="text-sm font-medium text-ink/80 hover:text-ink transition-colors"
+              >
+                New audit
+              </button>
+            )}
+          </header>
+
+          <div key={stage} className="flex-1 flex flex-col stage-3d">
+            {stage === "input" && (
+              <InputStage
+                urlInput={urlInput}
+                goalInput={goalInput}
+                onUrlChange={setUrlInput}
+                onGoalChange={setGoalInput}
+                onRun={handleRun}
+                error={error}
+              />
+            )}
+
+            {stage === "loading" && <RunningStage url={urlInput} goal={goalInput} />}
+
+            {stage === "results" && (
+              <ResultsStage
+                result={result}
+                status={status}
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                goal={goalInput}
+                url={urlInput}
+              />
+            )}
+          </div>
+
+          <style>{`
+            .stage-3d {
+              animation: stage3dIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+              transform-style: preserve-3d;
+            }
+            @keyframes stage3dIn {
+              from { opacity: 0; transform: perspective(1200px) rotateX(6deg) translateY(16px); }
+              to { opacity: 1; transform: perspective(1200px) rotateX(0deg) translateY(0); }
+            }
+          `}</style>
         </div>
       )}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 p-3 min-h-0">
-        <AgentViewport result={result} status={status} activeStep={activeStep} setActiveStep={setActiveStep} />
-        <JourneyGraph result={result} status={status} activeStep={activeStep} setActiveStep={setActiveStep} />
-      </main>
-      <TelemetryLog result={result} />
-      <DiagnosticsPanel result={result} status={status} goal={goalInput} url={urlInput} />
-    </div>
+    </>
   );
 }
